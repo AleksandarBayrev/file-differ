@@ -1,0 +1,28 @@
+{
+  "name": "file-differ",
+  "version": "1.0.0",
+  "description": "Checks files/folders if they're missing between source and destination",
+  "keywords": [
+    "file",
+    "differ"
+  ],
+  "homepage": "https://github.com/AleksandarBayrev/file-differ#readme",
+  "bugs": {
+    "url": "https://github.com/AleksandarBayrev/file-differ/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AleksandarBayrev/file-differ.git"
+  },
+  "license": "GPL-3.0",
+  "author": "Aleksandar Bayrev <aleksandarbayrev@gmail.com>",
+  "type": "commonjs",
+  "main": "file-differ.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "webpack": "^5.111.1",
+    "webpack-cli": "^7.2.3"
+  }
+}
