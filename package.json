@@ -19,7 +19,7 @@
   "type": "commonjs",
   "main": "file-differ.js",
   "scripts": {
-    "test": "jest"
+    "build": "webpack --config ./webpack.config.js"
   },
   "dependencies": {
     "webpack": "^5.111.1",

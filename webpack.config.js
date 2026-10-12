@@ -6,5 +6,5 @@ module.exports = {
     output: {
         filename: 'file-differ.js',
         path: path.resolve(__dirname, 'dist'),
-    }
+    },
 };

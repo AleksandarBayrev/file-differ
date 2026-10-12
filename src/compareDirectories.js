@@ -1,4 +1,4 @@
-const { readdir, stat } = require('fs/promises');
+const { readdir, stat: fsStat } = require('fs/promises');
 const { join, relative } = require('path');
 
 async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
@@ -8,7 +8,7 @@ async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
         for (const file of files) {
             const filePath = join(dir, file);
             try {
-                const stat = await stat(filePath);
+                const stat = await fsStat(filePath);
                 const relativePath = relative(baseDir, filePath);
 
                 if (stat.isDirectory()) {
