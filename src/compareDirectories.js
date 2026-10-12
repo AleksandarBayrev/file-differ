@@ -1,19 +1,19 @@
-const { readdirSync, statSync } = require('fs');
+const { readdir, stat } = require('fs/promises');
 const { join, relative } = require('path');
 
-function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
+async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
     try {
-        const files = readdirSync(dir);
+        const files = await readdir(dir);
 
         for (const file of files) {
             const filePath = join(dir, file);
             try {
-                const stat = statSync(filePath);
+                const stat = await stat(filePath);
                 const relativePath = relative(baseDir, filePath);
 
                 if (stat.isDirectory()) {
                     fileMap.set(relativePath, 'DIRECTORY');
-                    recurseDirectory(filePath, baseDir, fileMap);
+                    await recurseDirectory(filePath, baseDir, fileMap);
                 } else {
                     fileMap.set(relativePath, stat.size);
                 }
@@ -32,12 +32,12 @@ function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
     return fileMap;
 }
 
-function compareDirectories(dir1, dir2) {
+async function compareDirectories(dir1, dir2) {
     console.log(`Scanning Drive 1 (${dir1})...`);
-    const files1 = recurseDirectory(dir1);
+    const files1 = await recurseDirectory(dir1);
     
     console.log(`Scanning Drive 2 (${dir2})...`);
-    const files2 = recurseDirectory(dir2);
+    const files2 = await recurseDirectory(dir2);
 
     const missingOrDifferent = [];
 

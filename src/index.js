@@ -8,7 +8,7 @@ if (!firstPath || !secondPath) {
     process.exit(1);
 }
 
-const differences = compareDirectories(firstPath, secondPath);
+const differences = await compareDirectories(firstPath, secondPath);
 
 if (differences.length === 0) {
     console.log('\nThe hard drives are identical.');
