@@ -9,20 +9,20 @@
         process.exit(1);
     }
 
-    const output = [];
-
+    console.log('Comparing directories, please wait...');
     const differences = await compareDirectories(firstPath, secondPath);
 
-    if (differences.length === 0) {
+    const fileCount = differences.fileDiffs.length;
+    const dirCount = differences.directoryDiffs.length;
+    const totalDiffs = fileCount + dirCount;
+
+    if (totalDiffs === 0) {
         console.log('\nThe hard drives are identical.');
     } else {
-        console.log(`\nFound ${differences.length} differences:`);
-        output.push(`\nFound ${differences.length} differences:`);
-        differences.forEach(diff => {
-            console.log(diff);
-            output.push(diff);
-        });
-        await writeFile('differences.txt', output.join('\n'), 'utf8');
-        console.log('\nDifferences have been written to differences.txt');
+        console.log(`\nFound ${totalDiffs} total differences (${dirCount} directories, ${fileCount} files).`);
+
+        await writeFile('differences.json', JSON.stringify(differences, null, 4), 'utf8');
+
+        console.log('Differences have been written to differences.json');
     }
 })();
