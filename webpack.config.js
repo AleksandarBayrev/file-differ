@@ -1,4 +1,6 @@
 const path = require('path');
+const webpack = require('webpack');
+
 module.exports = {
     target: 'node',
     mode: 'production',
@@ -28,4 +30,13 @@ module.exports = {
             }
         ]
     },
+    optimization: {
+        splitChunks: false,
+        runtimeChunk: false
+    },
+    plugins: [
+        new webpack.optimize.LimitChunkCountPlugin({
+            maxChunks: 1
+        })
+    ]
 };
