@@ -1,7 +1,12 @@
-const { readdir, stat: fsStat } = require('fs/promises');
-const { join, relative } = require('path');
+import { readdir, stat as fsStat } from 'fs/promises';
+import { join, relative } from 'path';
+import { ComparisonResult, TypeMismatchDiff } from './types';
 
-async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
+async function recurseDirectory(
+  dir: string, 
+  baseDir = dir, 
+  fileMap = new Map<string, string | number>()
+): Promise<Map<string, string | number>> {
     try {
         const files = await readdir(dir);
 
@@ -12,18 +17,18 @@ async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
                 const relativePath = relative(baseDir, filePath);
 
                 if (stat.isDirectory()) {
-                    fileMap.set(relativePath, 'DIRECTORY');
+                    fileMap.set(join(baseDir, relativePath), 'DIRECTORY');
                     await recurseDirectory(filePath, baseDir, fileMap);
                 } else {
-                    fileMap.set(relativePath, stat.size);
+                    fileMap.set(join(baseDir, relativePath), stat.size);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 if (err.code !== 'EPERM' && err.code !== 'EACCES') {
                     console.error(`Error reading stat for ${filePath}:`, err.message);
                 }
             }
         }
-    } catch (err) {
+    } catch (err: any) {
         if (err.code !== 'EPERM' && err.code !== 'EACCES') {
             console.error(`Error reading directory ${dir}:`, err.message);
         }
@@ -32,19 +37,23 @@ async function recurseDirectory(dir, baseDir = dir, fileMap = new Map()) {
     return fileMap;
 }
 
-async function compareDirectories(dir1, dir2) {
+async function compareDirectories(dir1: string, dir2: string): Promise<ComparisonResult> {
     console.log(`Scanning Drive 1 (${dir1})...`);
     const files1 = await recurseDirectory(dir1);
     
     console.log(`Scanning Drive 2 (${dir2})...`);
     const files2 = await recurseDirectory(dir2);
 
-    const diffs = {
+    const diffs: ComparisonResult = {
         fileDiffs: [],
         directoryDiffs: []
     };
 
-    const addDiff = (path, isDir, issueObject) => {
+    const addDiff = (
+      path: string, 
+      isDir: boolean, 
+      issueObject: { issue: 'MISSING_IN_DRIVE_1' | 'MISSING_IN_DRIVE_2' }
+    ) => {
         if (isDir) {
             diffs.directoryDiffs.push({ path, ...issueObject });
         } else {
@@ -64,23 +73,20 @@ async function compareDirectories(dir1, dir2) {
                 const isDir1 = sizeOrType1 === 'DIRECTORY';
                 
                 if (isDir1 || isDir2) {
-                    // Type mismatch (One is a file, one is a directory)
-                    const issueObj = {
+                    const issueObj: Omit<TypeMismatchDiff, 'path'> = {
                         issue: 'TYPE_MISMATCH',
                         drive1Type: isDir1 ? 'Directory' : 'File',
                         drive2Type: isDir2 ? 'Directory' : 'File'
                     };
                     
-                    // Add to both since it affects a directory in one and a file in the other
                     diffs.directoryDiffs.push({ path: itemPath, ...issueObj });
                     diffs.fileDiffs.push({ path: itemPath, ...issueObj });
                 } else {
-                    // Both are files, but sizes differ
                     diffs.fileDiffs.push({
                         path: itemPath,
                         issue: 'DIFFERENT_SIZE',
-                        drive1Size: sizeOrType1,
-                        drive2Size: sizeOrType2
+                        drive1Size: sizeOrType1 as number,
+                        drive2Size: sizeOrType2 as number
                     });
                 }
             }
@@ -98,4 +104,4 @@ async function compareDirectories(dir1, dir2) {
     return diffs;
 }
 
-module.exports = { compareDirectories };
+export { compareDirectories };

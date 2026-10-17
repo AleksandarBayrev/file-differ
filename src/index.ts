@@ -1,6 +1,7 @@
 (async () => {
-    const { compareDirectories } = require('./compareDirectories.js');
-    const { writeFile } = require('fs/promises');
+    const { compareDirectories } = await import('./compareDirectories.js');
+    const { writeFile } = await import('fs/promises');
+
     const firstPath = process.argv[2];
     const secondPath = process.argv[3];
 
