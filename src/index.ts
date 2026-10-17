@@ -1,5 +1,5 @@
 (async () => {
-    const { compareDirectories } = await import('./compareDirectories.js');
+    const { compareDirectories } = await import('./compareDirectories');
     const { writeFile } = await import('fs/promises');
 
     const firstPath = process.argv[2];

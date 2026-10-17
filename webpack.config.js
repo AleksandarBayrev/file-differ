@@ -8,15 +8,24 @@ module.exports = {
         path: path.resolve(__dirname, 'dist'),
     },
     resolve: {
-        extensions: ['.ts', '.js', '.json'],
+        extensions: ['.ts', '.json'],
     },
     module: {
         rules: [
             {
                 test: /\.ts$/,
-                use: 'ts-loader',
-                exclude: /node_modules/,
-            },
-        ],
+                exclude: /(node_modules)/,
+                use: {
+                    loader: 'swc-loader',
+                    options: {
+                        jsc: {
+                            parser: {
+                                syntax: 'typescript'
+                            }
+                        }
+                    }
+                }
+            }
+        ]
     },
 };
