@@ -2,11 +2,17 @@ import { readdir, stat as fsStat } from 'fs/promises';
 import { join, relative } from 'path';
 import { ComparisonResult, TypeMismatchDiff } from './types';
 
+interface FileEntry {
+  baseDir: string;
+  problem: string | null;
+  size: number;
+}
+
 async function recurseDirectory(
   dir: string, 
   baseDir = dir, 
-  fileMap = new Map<string, { baseDir: string, problem: string | null, size: number }>()
-): Promise<Map<string, { baseDir: string, problem: string | null, size: number }>> {
+  fileMap = new Map<string, FileEntry>()
+): Promise<Map<string, FileEntry>> {
     try {
         const files = await readdir(dir);
 
@@ -49,55 +55,80 @@ async function compareDirectories(dir1: string, dir2: string): Promise<Compariso
         directoryDiffs: []
     };
 
-    const addDiff = (
-      path: string, 
-      isDir: boolean, 
-      issueObject: { issue: 'MISSING_IN_DRIVE_1' | 'MISSING_IN_DRIVE_2' }
-    ) => {
-        if (isDir) {
-            diffs.directoryDiffs.push({ path, ...issueObject });
-        } else {
-            diffs.fileDiffs.push({ path, ...issueObject });
-        }
-    };
-
-    for (const [itemPath, sizeOrType2] of files2.entries()) {
-        const isDir2 = sizeOrType2.problem === 'DIRECTORY';
+    for (const [itemPath, entry2] of files2.entries()) {
+        const isDir2 = entry2.problem === 'DIRECTORY';
+        const drive1FullPath = join(dir1, itemPath);
+        const drive2FullPath = join(dir2, itemPath);
 
         if (!files1.has(itemPath)) {
-            addDiff(itemPath, isDir2, { issue: 'MISSING_IN_DRIVE_1' });
+            // Missing in Drive 1: exists on Drive 2
+            const missingDiff = {
+                path: itemPath,
+                issue: 'MISSING_IN_DRIVE_1' as const,
+                basePath: entry2.baseDir,
+                drive1Path: drive1FullPath,
+                drive2Path: drive2FullPath
+            };
+
+            if (isDir2) {
+                diffs.directoryDiffs.push(missingDiff);
+            } else {
+                diffs.fileDiffs.push(missingDiff);
+            }
         } else {
-            const sizeOrType1 = files1.get(itemPath);
+            const entry1 = files1.get(itemPath)!;
+            const isDir1 = entry1.problem === 'DIRECTORY';
             
-            if (sizeOrType1 !== sizeOrType2) {
-                const isDir1 = sizeOrType1?.problem === 'DIRECTORY';
+            if (isDir1 !== isDir2) {
+                const typeMismatchObj: TypeMismatchDiff = {
+                    path: itemPath,
+                    issue: 'TYPE_MISMATCH',
+                    drive1Type: isDir1 ? 'Directory' : 'File',
+                    drive2Type: isDir2 ? 'Directory' : 'File',
+                    drive1BasePath: entry1.baseDir,
+                    drive2BasePath: entry2.baseDir,
+                    drive1Path: drive1FullPath,
+                    drive2Path: drive2FullPath
+                };
                 
-                if (isDir1 || isDir2) {
-                    const issueObj: Omit<TypeMismatchDiff, 'path'> = {
-                        issue: 'TYPE_MISMATCH',
-                        drive1Type: isDir1 ? 'Directory' : 'File',
-                        drive2Type: isDir2 ? 'Directory' : 'File'
-                    };
-                    
-                    diffs.directoryDiffs.push({ path: itemPath, ...issueObj });
-                    diffs.fileDiffs.push({ path: itemPath, ...issueObj });
-                } else {
-                    diffs.fileDiffs.push({
-                        path: itemPath,
-                        issue: 'DIFFERENT_SIZE',
-                        drive1Size: sizeOrType1?.size ?? 0,
-                        drive2Size: sizeOrType2.size
-                    });
-                }
+                diffs.directoryDiffs.push(typeMismatchObj);
+                diffs.fileDiffs.push(typeMismatchObj);
+            } else if (!isDir1 && !isDir2 && entry1.size !== entry2.size) {
+                diffs.fileDiffs.push({
+                    path: itemPath,
+                    issue: 'DIFFERENT_SIZE',
+                    drive1Size: entry1.size,
+                    drive2Size: entry2.size,
+                    drive1BasePath: entry1.baseDir,
+                    drive2BasePath: entry2.baseDir,
+                    drive1Path: drive1FullPath,
+                    drive2Path: drive2FullPath
+                });
             }
         }
     }
 
-    for (const [itemPath, sizeOrType1] of files1.entries()) {
-        const isDir1 = sizeOrType1.problem === 'DIRECTORY';
+    for (const [itemPath, entry1] of files1.entries()) {
+        const isDir1 = entry1.problem === 'DIRECTORY';
         
         if (!files2.has(itemPath)) {
-            addDiff(itemPath, isDir1, { issue: 'MISSING_IN_DRIVE_2' });
+            // Missing in Drive 2: exists on Drive 1
+            const drive1FullPath = join(dir1, itemPath);
+            const drive2FullPath = join(dir2, itemPath);
+
+            const missingDiff = {
+                path: itemPath,
+                issue: 'MISSING_IN_DRIVE_2' as const,
+                basePath: entry1.baseDir,
+                drive1Path: drive1FullPath,
+                drive2Path: drive2FullPath
+            };
+
+            if (isDir1) {
+                diffs.directoryDiffs.push(missingDiff);
+            } else {
+                diffs.fileDiffs.push(missingDiff);
+            }
         }
     }
 
