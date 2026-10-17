@@ -5,8 +5,8 @@ import { ComparisonResult, TypeMismatchDiff } from './types';
 async function recurseDirectory(
   dir: string, 
   baseDir = dir, 
-  fileMap = new Map<string, string | number>()
-): Promise<Map<string, string | number>> {
+  fileMap = new Map<string, { baseDir: string, problem: string | null, size: number }>()
+): Promise<Map<string, { baseDir: string, problem: string | null, size: number }>> {
     try {
         const files = await readdir(dir);
 
@@ -17,10 +17,10 @@ async function recurseDirectory(
                 const relativePath = relative(baseDir, filePath);
 
                 if (stat.isDirectory()) {
-                    fileMap.set(join(baseDir, relativePath), 'DIRECTORY');
+                    fileMap.set(relativePath, { baseDir, problem: 'DIRECTORY', size: 0 });
                     await recurseDirectory(filePath, baseDir, fileMap);
                 } else {
-                    fileMap.set(join(baseDir, relativePath), stat.size);
+                    fileMap.set(relativePath, { baseDir, problem: null, size: stat.size });
                 }
             } catch (err: any) {
                 if (err.code !== 'EPERM' && err.code !== 'EACCES') {
@@ -62,7 +62,7 @@ async function compareDirectories(dir1: string, dir2: string): Promise<Compariso
     };
 
     for (const [itemPath, sizeOrType2] of files2.entries()) {
-        const isDir2 = sizeOrType2 === 'DIRECTORY';
+        const isDir2 = sizeOrType2.problem === 'DIRECTORY';
 
         if (!files1.has(itemPath)) {
             addDiff(itemPath, isDir2, { issue: 'MISSING_IN_DRIVE_1' });
@@ -70,7 +70,7 @@ async function compareDirectories(dir1: string, dir2: string): Promise<Compariso
             const sizeOrType1 = files1.get(itemPath);
             
             if (sizeOrType1 !== sizeOrType2) {
-                const isDir1 = sizeOrType1 === 'DIRECTORY';
+                const isDir1 = sizeOrType1?.problem === 'DIRECTORY';
                 
                 if (isDir1 || isDir2) {
                     const issueObj: Omit<TypeMismatchDiff, 'path'> = {
@@ -85,8 +85,8 @@ async function compareDirectories(dir1: string, dir2: string): Promise<Compariso
                     diffs.fileDiffs.push({
                         path: itemPath,
                         issue: 'DIFFERENT_SIZE',
-                        drive1Size: sizeOrType1 as number,
-                        drive2Size: sizeOrType2 as number
+                        drive1Size: sizeOrType1?.size ?? 0,
+                        drive2Size: sizeOrType2.size
                     });
                 }
             }
@@ -94,7 +94,7 @@ async function compareDirectories(dir1: string, dir2: string): Promise<Compariso
     }
 
     for (const [itemPath, sizeOrType1] of files1.entries()) {
-        const isDir1 = sizeOrType1 === 'DIRECTORY';
+        const isDir1 = sizeOrType1.problem === 'DIRECTORY';
         
         if (!files2.has(itemPath)) {
             addDiff(itemPath, isDir1, { issue: 'MISSING_IN_DRIVE_2' });
