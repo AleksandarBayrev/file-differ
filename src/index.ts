@@ -1,6 +1,7 @@
 (async () => {
     const { compareDirectories } = await import('./compareDirectories');
     const { writeFile } = await import('fs/promises');
+    const { join } = await import('path');
 
     const firstPath = process.argv[2];
     const secondPath = process.argv[3];
@@ -22,8 +23,10 @@
     } else {
         console.log(`\nFound ${totalDiffs} total differences (${dirCount} directories, ${fileCount} files).`);
 
-        await writeFile('differences.json', JSON.stringify(differences, null, 4), 'utf8');
+        const filePath = join(process.cwd(), 'differences.json');
 
-        console.log('Differences have been written to differences.json');
+        await writeFile(filePath, JSON.stringify(differences, null, 4), 'utf8');
+
+        console.log(`Differences have been written to ${filePath}`);
     }
 })();
